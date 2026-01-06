@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 247 100% 84%;
+    /* Lavender #BDB2FF */
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 13 72% 62%;
+    /* Terracotta #E2725B */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 247 100% 84%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-obsidian text-foreground font-sans min-h-screen selection:bg-lavender/30 selection:text-white overflow-hidden;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-opacity-10 backdrop-blur-xl border border-white/10 bg-white/5;
+  }
+
+  .glass-card {
+    @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-lg shadow-black/20;
+  }
+
+  .neon-border-primary {
+    @apply border border-lavender/30 shadow-[0_0_15px_rgba(189, 178, 255, 0.1)];
+  }
+
+  .neon-border-secondary {
+    @apply border border-terracotta/30 shadow-[0_0_15px_rgba(226, 114, 91, 0.1)];
+  }
+
+  .text-glow-primary {
+    text-shadow: 0 0 10px rgba(189, 178, 255, 0.5);
+  }
+}
