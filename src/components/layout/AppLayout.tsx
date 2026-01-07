@@ -8,7 +8,7 @@ export default function AppLayout() {
     return (
         <div className="flex bg-slate-950 h-screen w-full overflow-hidden text-slate-100 selection:bg-primary/20 selection:text-primary">
             <Sidebar />
-            <main className="flex-1 relative overflow-hidden">
+            <main className="flex-1 relative overflow-hidden pl-20">
                 {/* Background Ambient Mesh */}
                 <div className="absolute inset-0 z-0 pointer-events-none">
                     <div className="absolute top-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[100px] animate-slow-spin" />
