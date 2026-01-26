@@ -1,11 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export function ContributorView() {
+    const { user } = useAuth();
     const [isDragging, setIsDragging] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-    const [history, setHistory] = useState<Array<{ id: string; name: string; status: 'success' | 'error' }>>([]);
+    const [history, setHistory] = useState<Array<{ id: string; name: string; status: 'success' | 'error'; date: string }>>([]);
+
+    useEffect(() => {
+        if (user?.id) {
+            fetchHistory();
+        }
+    }, [user?.id]);
+
+    const fetchHistory = async () => {
+        try {
+            const res = await fetch(`http://localhost:5000/api/logs/user/${user?.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setHistory(data.map((log: any) => ({
+                    id: log._id,
+                    name: log.source,
+                    status: 'success', // Assuming stored logs are successful
+                    date: new Date(log.uploaded_at).toLocaleString()
+                })));
+            }
+        } catch (err) {
+            console.error("Failed to fetch history:", err);
+        }
+    };
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -21,27 +46,40 @@ export function ContributorView() {
         setIsDragging(false);
         const files = Array.from(e.dataTransfer.files);
         if (files.length > 0) {
-            simulateUpload(files[0]);
+            handleUpload(files[0]);
         }
     };
 
-    const simulateUpload = (file: File) => {
+    const handleUpload = async (file: File) => {
         setUploadStatus('uploading');
 
-        // Cinematic delay for "Encryption & Upload"
-        setTimeout(() => {
-            const isSuccess = Math.random() > 0.1; // 90% success rate
-            setUploadStatus(isSuccess ? 'success' : 'error');
+        // Cinematic delay for "Encryption & Upload" (kept for effect, but doing real request)
+        setTimeout(async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uploaded_by: user?.id,
+                        log_type: 'server', // Defaulting to server for now
+                        source: file.name
+                    })
+                });
 
-            setHistory(prev => [{
-                id: crypto.randomUUID(),
-                name: file.name,
-                status: isSuccess ? 'success' : 'error'
-            }, ...prev]);
+                if (res.ok) {
+                    setUploadStatus('success');
+                    fetchHistory(); // Refresh history
+                } else {
+                    setUploadStatus('error');
+                }
+            } catch (err) {
+                console.error("Upload error:", err);
+                setUploadStatus('error');
+            }
 
             // Reset after showing result
             setTimeout(() => setUploadStatus('idle'), 2000);
-        }, 2000);
+        }, 1500);
     };
 
     return (
@@ -151,17 +189,20 @@ export function ContributorView() {
                                 >
                                     <div className="flex items-center space-x-3">
                                         <FileText className="w-4 h-4 text-slate-500" />
-                                        <span className="text-sm text-slate-300 font-mono">{item.name}</span>
+                                        <div>
+                                            <div className="text-sm text-slate-300 font-mono">{item.name}</div>
+                                            <div className="text-xs text-slate-600 font-mono">{item.date}</div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center space-x-2">
                                         {item.status === 'success' ? (
                                             <>
-                                                <span className="text-xs text-green-400 font-mono">VERIFIED</span>
+                                                <span className="text-xs text-green-400 font-mono">UPLOADED</span>
                                                 <CheckCircle2 className="w-4 h-4 text-green-400" />
                                             </>
                                         ) : (
                                             <>
-                                                <span className="text-xs text-red-400 font-mono">REJECTED</span>
+                                                <span className="text-xs text-red-400 font-mono">FAILED</span>
                                                 <XCircle className="w-4 h-4 text-red-400" />
                                             </>
                                         )}

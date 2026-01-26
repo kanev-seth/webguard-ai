@@ -13,7 +13,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (role: UserRole) => Promise<void>;
+    login: (role: UserRole, username?: string, password?: string) => Promise<void>;
     logout: () => void;
 }
 
@@ -31,20 +31,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }, []);
 
-    const login = async (role: UserRole) => {
-        return new Promise<void>((resolve) => {
+    const login = async (role: UserRole, username?: string, password?: string) => {
+        return new Promise<void>(async (resolve, reject) => {
             setIsLoading(true);
-            setTimeout(() => {
-                const newUser: User = {
-                    id: crypto.randomUUID(),
-                    name: role.charAt(0).toUpperCase() + role.slice(1),
-                    role
-                };
-                setUser(newUser);
-                localStorage.setItem('webguard_user', JSON.stringify(newUser));
-                setIsLoading(false);
+            try {
+                // If username/password provided (real login), verify with backend
+                if (username && password) {
+                    const response = await fetch('http://localhost:5000/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: username, password })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Login failed');
+                    }
+
+                    const data = await response.json();
+
+                    // Map backend role to frontend role
+                    let mappedRole: UserRole = 'contributor';
+                    if (data.role === 'Security Analyst') mappedRole = 'analyst';
+                    if (data.role === 'Security Manager') mappedRole = 'manager';
+
+                    const newUser: User = {
+                        id: data.user_id,
+                        name: data.name,
+                        role: mappedRole
+                    };
+                    setUser(newUser);
+                    localStorage.setItem('webguard_user', JSON.stringify(newUser));
+                } else {
+                    // Fallback for hardcoded simulation (if needed, though we should prefer real auth now)
+                    const newUser: User = {
+                        id: crypto.randomUUID(),
+                        name: role.charAt(0).toUpperCase() + role.slice(1),
+                        role
+                    };
+                    setUser(newUser);
+                    localStorage.setItem('webguard_user', JSON.stringify(newUser));
+                }
                 resolve();
-            }, 1000); // Cinematic delay
+            } catch (error) {
+                console.error("Login error:", error);
+                reject(error);
+            } finally {
+                setIsLoading(false);
+            }
         });
     };
 
