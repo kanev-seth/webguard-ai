@@ -10,6 +10,7 @@ export default {
         obsidian: "#020617", // Base canvas
         lavender: "#BDB2FF", // Primary Accent (Safe/Action)
         terracotta: "#E2725B", // Secondary Accent (Alert/Critical)
+        emerald: "#10B981",   // Secure / Benign state
 
         // Semantic overrides
         background: "#020617",
@@ -23,6 +24,8 @@ export default {
         muted: "rgba(255, 255, 255, 0.05)",
         "muted-foreground": "#94a3b8",
         border: "rgba(255, 255, 255, 0.1)",
+        crimson: "#DC2626",
+
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

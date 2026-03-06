@@ -3,6 +3,8 @@ import { type UserRole, useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Upload, FileText, Lock, Info, X } from 'lucide-react';
 import { useState } from 'react';
+import { getRoleHome } from '../components/layout/ProtectedRoute';
+
 
 const personas = [
     {
@@ -114,7 +116,7 @@ export default function Login() {
             } else {
                 // Login Flow
                 await login(selectedRole, username, password);
-                navigate('/dashboard');
+                navigate(getRoleHome(selectedRole));
             }
         } catch (err: any) {
             console.error(err);

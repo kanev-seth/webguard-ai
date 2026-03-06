@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,57 +8,93 @@
   :root {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 247 100% 84%;
-    /* Lavender #BDB2FF */
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 13 72% 62%;
-    /* Terracotta #E2725B */
-    --secondary-foreground: 210 40% 98%;
+    --primary: 247 100% 84%;    /* Lavender #BDB2FF */
+    --secondary: 13 72% 62%;    /* Terracotta #E2725B */
+    --emerald: 160 84% 39%;     /* #10B981 */
+    --crimson: 0 72% 51%;       /* #DC2626 */
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
     --ring: 247 100% 84%;
     --radius: 0.75rem;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  * { @apply border-border; }
   body {
-    @apply bg-obsidian text-foreground font-sans min-h-screen selection:bg-lavender/30 selection:text-white overflow-hidden;
+    @apply bg-obsidian text-foreground font-sans min-h-screen selection:bg-lavender/30 selection:text-white;
+    overflow: hidden;
   }
 }
 
 @layer utilities {
+  /* ── Glass panels ─────────────────────────────────────────────────────────── */
   .glass-panel {
-    @apply bg-opacity-10 backdrop-blur-xl border border-white/10 bg-white/5;
+    @apply backdrop-blur-xl border border-white/10 bg-white/5;
   }
-
   .glass-card {
     @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-lg shadow-black/20;
   }
 
+  /* ── Neon borders ─────────────────────────────────────────────────────────── */
   .neon-border-primary {
-    @apply border border-lavender/30 shadow-[0_0_15px_rgba(189, 178, 255, 0.1)];
+    @apply border border-lavender/30 shadow-[0_0_20px_rgba(189,178,255,0.12)];
+  }
+  .neon-border-emerald {
+    @apply border border-emerald/30 shadow-[0_0_20px_rgba(16,185,129,0.12)];
+  }
+  .neon-border-crimson {
+    @apply border border-crimson/30 shadow-[0_0_20px_rgba(220,38,38,0.15)];
   }
 
-  .neon-border-secondary {
-    @apply border border-terracotta/30 shadow-[0_0_15px_rgba(226, 114, 91, 0.1)];
+  /* ── Text glow ────────────────────────────────────────────────────────────── */
+  .text-glow-primary  { text-shadow: 0 0 12px rgba(189,178,255,0.5); }
+  .text-glow-emerald  { text-shadow: 0 0 12px rgba(16,185,129,0.5);  }
+  .text-glow-crimson  { text-shadow: 0 0 12px rgba(220,38,38,0.5);   }
+
+  /* ── Scrollbars ───────────────────────────────────────────────────────────── */
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar       { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  /* ── Animated mesh gradient (Landing page background) ────────────────────── */
+  .mesh-bg {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(189,178,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 70%, rgba(16,185,129,0.05) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 80% at 60% 10%, rgba(220,38,38,0.04) 0%, transparent 50%),
+      #020617;
+    animation: mesh-drift 18s ease-in-out infinite alternate;
   }
 
-  .text-glow-primary {
-    text-shadow: 0 0 10px rgba(189, 178, 255, 0.5);
+  @keyframes mesh-drift {
+    0%   { background-position: 0% 0%, 100% 100%, 50% 0%; }
+    50%  { background-position: 10% 20%, 80%  70%, 60% 30%; }
+    100% { background-position: 5% 10%, 90%  80%, 40% 20%; }
+  }
+
+  /* ── Misc animations ──────────────────────────────────────────────────────── */
+  .animate-slow-spin { animation: spin 20s linear infinite; }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  /* ── Gradient button glow ─────────────────────────────────────────────────── */
+  .btn-glow-lavender {
+    box-shadow: 0 0 24px rgba(189,178,255,0.25), 0 0 6px rgba(189,178,255,0.15);
+  }
+  .btn-glow-emerald {
+    box-shadow: 0 0 24px rgba(16,185,129,0.25), 0 0 6px rgba(16,185,129,0.15);
   }
 }
