@@ -1,31 +1,28 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Node dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json # (Optional, but often ignored if using yarn)
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Environment Variables
+# Environment variables
 .env
-.env.*
+.env.local
 
-# System Files
+# System files
+.DS_Store
 Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Python/AI Service files
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Large AI Models
+ai_service/isolation_forest_model.pkl
+ai_service/ip_profile_train.pkl
+ai_service/robust_scaler.pkl

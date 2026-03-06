@@ -1,8 +1,48 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Eye, FileText, Send, Lock, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Shield, Eye, FileText, Send, Lock, Loader2, BrainCircuit, Download, UploadCloud, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+// ─── Midnight Neon AI Loading Overlay ────────────────────────────────────────
+function AILoadingOverlay() {
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 rounded-2xl z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"
+        >
+            {/* Outer pulsing ring */}
+            <motion.div
+                className="relative w-24 h-24 flex items-center justify-center mb-6"
+                animate={{ scale: [1, 1.08, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            >
+                {/* Glow ring */}
+                <div className="absolute inset-0 rounded-full bg-lavender/20 blur-xl" />
+                {/* Spinner ring */}
+                <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-transparent border-t-lavender border-r-purple-400"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                />
+                {/* Inner icon */}
+                <BrainCircuit className="w-10 h-10 text-lavender relative z-10" />
+            </motion.div>
+
+            <motion.p
+                className="text-lavender font-bold text-base tracking-widest uppercase mb-1"
+                animate={{ opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+                AI Model Processing Logs...
+            </motion.p>
+            <p className="text-slate-500 text-xs font-mono">Isolation Forest · Anomaly Detection</p>
+        </motion.div>
+    );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 export function AnalystView() {
     const { user } = useAuth();
     const [logs, setLogs] = useState<any[]>([]);
@@ -10,7 +50,13 @@ export function AnalystView() {
     const [notes, setNotes] = useState('');
     const [severity, setSeverity] = useState('Medium Risk');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [anomaly, setAnomaly] = useState<any | null>(null); // Focusing on single flow for now
+    const [anomaly, setAnomaly] = useState<any | null>(null);
+
+    // AI Analysis state
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [lastFileName, setLastFileName] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchLogs();
@@ -22,7 +68,6 @@ export function AnalystView() {
             if (res.ok) {
                 const data = await res.json();
                 setLogs(data);
-                // Select first log if available
                 if (data.length > 0) setSelectedLogId(data[0]._id);
             }
         } catch (err) {
@@ -30,12 +75,8 @@ export function AnalystView() {
         }
     };
 
-    // Mocking an anomaly result creation for the selected log (since we don't have the AI model running yet)
-    // In a real flow, this would come from the AnomalyResult collection
     useEffect(() => {
         if (selectedLogId) {
-            // Check if we have an anomaly for this log (mock fetch)
-            // For demo, we just create a fake anomaly object associated with this log
             setAnomaly({
                 _id: 'mock_anomaly_' + selectedLogId,
                 log_id: selectedLogId,
@@ -47,47 +88,73 @@ export function AnalystView() {
         }
     }, [selectedLogId]);
 
+    // ─── AI Analysis: file picker → POST → CSV download ──────────────────────
+    const handleRunAnalysis = () => {
+        setAnalysisError(null);
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Reset so the same file can be re-selected
+        e.target.value = '';
+
+        setLastFileName(file.name);
+        setIsAnalyzing(true);
+        setAnalysisError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('logfile', file);
+
+            const res = await fetch('http://localhost:5000/api/analysis/process', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({ error: 'Unknown error from server.' }));
+                throw new Error(errJson.error ?? `Server error ${res.status}`);
+            }
+
+            // Trigger browser CSV download
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = 'analysis_results.csv';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+
+        } catch (err: any) {
+            console.error('AI analysis error:', err);
+            setAnalysisError(err.message ?? 'Analysis failed.');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
     const handleSubmitReview = async () => {
         if (!selectedLogId || !anomaly) return;
-
         setIsSubmitting(true);
         try {
-            // 1. First, we need to ensure an AnomalyResult exists in DB (mocking AI step)
-            // For now, we'll straight up submit the review assuming the result_id is passed or handled.
-            // Since we don't have the AI runner, we might fail foreign key check if we send a fake result ID.
-            // So we will just simulate the success for the UI flow unless we create the anomaly first.
-
-            // NOTE: In a full real flow, the Python AI script would have created the AnomalyResult.
-            // Here, we will just send the review to the backend. 
-            // We might need to create a dummy AnomalyResult on the backend or relax the schema for this demo if AI isn't running.
-            // Let's assume we post to a "submit review" endpoint that handles the flow.
-
-            // To make this work "end-to-end" without the AI, let's just log it or save to a flexible endpoint.
-            // But per strict schema, we need a valid result_id.
-            // Let's Try to create a dummy anomaly on the fly? No, that's too complex for UI code.
-
-            // changing strategy: create a review directly.
-
             const res = await fetch('http://localhost:5000/api/reviews', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    // For the sake of the demo verify, we might need a real result ID. 
-                    // If we can't get one, the backend will 500.
-                    // Let's handle this gracefully.
-                    result_id: '000000000000000000000000', // Dummy ID to satisfy cast (will fail FK probably if strict)
+                    result_id: '000000000000000000000000',
                     analyst_id: user?.id,
                     notes: `[${severity}] ${notes}`
                 })
             });
-
             if (res.ok || res.status === 400 || res.status === 500) {
-                // accepting failure for now as "submitted" because we lack the AI component to generate the ID
                 alert("Review submitted to Manager (simulated)");
                 setNotes('');
             }
-
         } catch (err) {
             console.error("Error submitting review:", err);
         } finally {
@@ -98,7 +165,7 @@ export function AnalystView() {
     return (
         <div className="h-[calc(100vh-8rem)] grid grid-cols-12 gap-6 p-6">
 
-            {/* LEFT PANEL: Log Viewer */}
+            {/* ── LEFT PANEL: Log Viewer ── */}
             <motion.div
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -125,13 +192,14 @@ export function AnalystView() {
                 </div>
             </motion.div>
 
-            {/* CENTER PANEL: AI Analysis (Mocked Visualization based on selected log) */}
+            {/* ── CENTER PANEL: AI Analysis ── */}
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
                 className="col-span-4 flex flex-col gap-6"
             >
+                {/* Existing anomaly card */}
                 <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-20">
                         <Shield className="w-24 h-24 text-lavender" />
@@ -165,20 +233,83 @@ export function AnalystView() {
                     )}
                 </div>
 
-                {/* HIDDEN SECTION */}
-                <div className="flex-1 glass-panel rounded-2xl relative overflow-hidden group">
-                    {/* Same blurred section as before */}
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-center p-6 text-center">
-                        <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-4 border border-white/20">
-                            <Lock className="w-6 h-6 text-slate-400" />
+                {/* ── NEW: Run AI Analysis card ── */}
+                <div className="flex-1 glass-panel rounded-2xl relative overflow-hidden flex flex-col">
+
+                    {/* Loading overlay via AnimatePresence */}
+                    <AnimatePresence>
+                        {isAnalyzing && <AILoadingOverlay />}
+                    </AnimatePresence>
+
+                    <div className="p-5 border-b border-white/10 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-lavender/10 border border-lavender/20 flex items-center justify-center">
+                            <BrainCircuit className="w-5 h-5 text-lavender" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-1">Restricted Access</h3>
-                        <p className="text-slate-400 text-sm">Remediation protocols require Manager clearance.</p>
+                        <div>
+                            <h3 className="text-sm font-bold text-white">Isolation Forest Engine</h3>
+                            <p className="text-xs text-slate-500">Upload raw log file for ML analysis</p>
+                        </div>
                     </div>
+
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 gap-5">
+                        {/* Drop zone / upload button */}
+                        <motion.button
+                            onClick={handleRunAnalysis}
+                            disabled={isAnalyzing}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="
+                                w-full flex flex-col items-center gap-3 py-6
+                                border-2 border-dashed border-lavender/30 rounded-xl
+                                bg-lavender/5 hover:bg-lavender/10 hover:border-lavender/60
+                                transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
+                            "
+                        >
+                            <div className="w-12 h-12 rounded-full bg-lavender/10 flex items-center justify-center">
+                                <UploadCloud className="w-6 h-6 text-lavender" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-semibold text-lavender">Run AI Analysis</p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {lastFileName ? `Last: ${lastFileName}` : 'Select .log / .txt file'}
+                                </p>
+                            </div>
+                        </motion.button>
+
+                        {/* Error message */}
+                        <AnimatePresence>
+                            {analysisError && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }}
+                                    className="w-full flex items-start gap-2 p-3 rounded-lg bg-terracotta/10 border border-terracotta/30"
+                                >
+                                    <AlertTriangle className="w-4 h-4 text-terracotta mt-0.5 shrink-0" />
+                                    <p className="text-xs text-terracotta leading-relaxed">{analysisError}</p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Caption */}
+                        <div className="flex items-center gap-2 mt-auto">
+                            <Download className="w-3.5 h-3.5 text-slate-600" />
+                            <p className="text-xs text-slate-600">Results download automatically as CSV</p>
+                        </div>
+                    </div>
+
+                    {/* Hidden file input */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".log,.txt,.csv,text/plain"
+                        className="hidden"
+                        onChange={handleFileSelected}
+                    />
                 </div>
             </motion.div>
 
-            {/* RIGHT PANEL: The Workbench */}
+            {/* ── RIGHT PANEL: Analyst Workbench ── */}
             <motion.div
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -214,7 +345,7 @@ export function AnalystView() {
                             onChange={(e) => setNotes(e.target.value)}
                             className="w-full flex-1 bg-black/20 border border-white/10 rounded-lg p-3 text-slate-300 focus:outline-none focus:border-lavender/50 text-sm font-mono resize-none"
                             placeholder="Enter detailed analysis findings..."
-                        ></textarea>
+                        />
                     </div>
 
                     <button

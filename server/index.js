@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import logRoutes from './routes/logs.js';
 import reviewRoutes from './routes/reviews.js';
 import reportRoutes from './routes/reports.js';
+import analysisRoutes from './routes/analysis.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/analysis', analysisRoutes);
 
 // Start Server
 app.listen(PORT, () => {
