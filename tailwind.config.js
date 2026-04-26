@@ -35,9 +35,16 @@ export default {
         'glass': 'linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)',
         'glass-hover': 'linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)',
       },
+      backdropBlur: {
+        '3xl': '64px',
+        '4xl': '80px',
+      },
       animation: {
-        "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "float": "float 6s ease-in-out infinite",
+        "pulse-slow":    "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float":         "float 6s ease-in-out infinite",
+        "shimmer":       "schematic-shimmer 1.8s linear infinite",
+        "orbit":         "orbit 3s linear infinite",
+        "scan":          "scan-sweep 3s linear infinite",
       },
       keyframes: {
         float: {

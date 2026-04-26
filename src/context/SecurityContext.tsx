@@ -54,6 +54,10 @@ interface SecurityContextType {
     auditTrail:  AuditEntry[];
     addEscalation:    (threat: AnalystRow, comment: string, analystName: string) => void;
     resolveEscalation:(escalationId: string, action: string, managerName: string)  => void;
+
+    // AI Report persistence (latest report ID from LLM run)
+    aiReportId: string | null;
+    setAiReportId: (id: string | null) => void;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -133,6 +137,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     const [pendingLogs,   setPendingLogs]   = useState<PendingLog[]>(SEED_PENDING);
     const [escalations,   setEscalations]   = useState<Escalation[]>(SEED_ESCALATIONS);
     const [auditTrail,    setAuditTrail]    = useState<AuditEntry[]>(SEED_AUDIT);
+    const [aiReportId,    setAiReportId]    = useState<string | null>(null);
 
     // ── Pending log helpers ──────────────────────────────────────────────────
     const addPendingLog = (log: PendingLog) =>
@@ -181,6 +186,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         <SecurityContext.Provider value={{
             pendingLogs, addPendingLog, setPendingLogStatus, removePendingLog,
             escalations, auditTrail, addEscalation, resolveEscalation,
+            aiReportId, setAiReportId,
         }}>
             {children}
         </SecurityContext.Provider>

@@ -7,7 +7,7 @@ export default function AppLayout() {
     const location = useLocation();
 
     return (
-        <div className="flex flex-col bg-slate-950 h-screen w-full overflow-hidden text-slate-100">
+        <div id="app-root" className="mesh-bg flex flex-col h-screen w-full overflow-hidden text-slate-100 transition-all duration-1000">
             {/* Persistent top bar */}
             <TopBar />
 
