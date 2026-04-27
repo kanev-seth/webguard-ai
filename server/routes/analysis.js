@@ -194,8 +194,9 @@ router.post('/process-ai', upload.single('logfile'), async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/analysis/generate-ai-report
 // Accepts: JSON body { results: [...], filename: "name.log" }
-// The frontend sends already-parsed rows — NO file re-upload required.
-// Returns: Expert_Security_Report.csv attachment
+// Returns: JSON { summary, riskLevel, remediations, anomalyCount, totalLines,
+//                 aiEnabled, reportId, generatedAt }
+// Expert CSV is saved to MongoDB; downloadable via /ai-reports/:id/download
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/generate-ai-report', async (req, res) => {
     const { results, filename = 'analysis.log' } = req.body ?? {};
@@ -204,26 +205,40 @@ router.post('/generate-ai-report', async (req, res) => {
         return res.status(400).json({ error: 'Request body must contain a non-empty "results" array.' });
     }
 
-    // ── Call the LLM ──────────────────────────────────────────────────────────
+    const anomalyCount = results.filter((r) => r.is_anomaly).length;
+
+    // Only call LLM when there are actual anomalies to analyse
     let aiReport = null;
-    try {
-        aiReport = await generateAIReport(results);
-    } catch (err) {
-        console.error('❌ AI report generation error:', err.message);
+    if (anomalyCount > 0) {
+        try {
+            aiReport = await generateAIReport(results);
+        } catch (err) {
+            console.error('❌ AI report generation error:', err.message);
+        }
     }
 
-    // ── Build Expert CSV ──────────────────────────────────────────────────────
-    const expertCsv = toExpertCSV(results, aiReport);
+    // Graceful fallbacks
+    const summary = aiReport?.summary
+        ?? (anomalyCount === 0
+            ? 'Analysis complete. No anomalous traffic was detected in this log sample. All requests fall within normal operational parameters. Continue routine monitoring and schedule the next audit within 7 days.'
+            : 'AI analysis unavailable. Please set HUGGINGFACE_API_KEY in your .env file to enable LLM-powered expert commentary.');
 
-    // ── Persist to MongoDB ────────────────────────────────────────────────────
+    const riskLevel    = aiReport?.riskLevel ?? (anomalyCount === 0 ? 'LOW' : 'MEDIUM');
+    const remediations = aiReport?.remediations ?? (anomalyCount === 0
+        ? ['Maintain current monitoring cadence.', 'Schedule next full log audit within 7 days.', 'Verify firewall rules are current and comprehensive.']
+        : ['Review flagged source IPs at the edge firewall.', 'Enable rate limiting on authentication endpoints.', 'Rotate API credentials on any affected services.']);
+
+    // Build Expert CSV with UTF-8 BOM (fixes Excel encoding for special chars)
+    const expertCsv = '\uFEFF' + toExpertCSV(results, { summary, riskLevel, remediations });
+
+    // Persist to MongoDB
     let savedReport = null;
     try {
-        const anomalyCount = results.filter((r) => r.is_anomaly).length;
         savedReport = await AIReport.create({
             filename,
-            summary:         aiReport?.summary      ?? 'AI analysis unavailable — set HUGGINGFACE_API_KEY.',
-            riskLevel:       aiReport?.riskLevel     ?? 'MEDIUM',
-            remediations:    aiReport?.remediations  ?? [],
+            summary,
+            riskLevel,
+            remediations,
             rawAnomalyCount: anomalyCount,
             totalLines:      results.length,
             expertCsvBase64: Buffer.from(expertCsv).toString('base64'),
@@ -233,14 +248,18 @@ router.post('/generate-ai-report', async (req, res) => {
         console.error('⚠️  Could not save AIReport to MongoDB:', dbErr.message);
     }
 
-    // ── Send Enhanced CSV ─────────────────────────────────────────────────────
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="Expert_Security_Report.csv"');
-    res.setHeader('X-AI-Enabled', aiReport ? 'true' : 'false');
-    if (savedReport) {
-        res.setHeader('X-AI-Report-Id', String(savedReport._id));
-    }
-    res.send(expertCsv);
+    // Return JSON — frontend renders the briefing panel
+    res.json({
+        summary,
+        riskLevel,
+        remediations,
+        anomalyCount,
+        totalLines:  results.length,
+        aiEnabled:   !!aiReport,
+        reportId:    savedReport?._id?.toString() ?? null,
+        filename,
+        generatedAt: new Date().toISOString(),
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

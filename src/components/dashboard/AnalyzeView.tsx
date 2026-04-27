@@ -7,6 +7,7 @@ import { DataTable } from './DataTable';
 import { AnalystNoteModal } from './AnalystNoteModal';
 import { ThreatRadar, computeThreatData } from '../ui/ThreatRadar';
 import { SkeletonTable } from '../ui/SkeletonLoader';
+import { AIReportPanel, type AIReportData } from '../ui/AIReportPanel';
 
 // ─── Animated Counter ────────────────────────────────────────────────────────
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {
@@ -177,6 +178,7 @@ export function AnalyzeView() {
     const [selectedRow, setSelectedRow] = useState<AnalystRow | null>(null);
     const [aiText, setAiText]           = useState('');
     const [aiSuccess, setAiSuccess]     = useState(false);
+    const [aiReportData, setAiReportData] = useState<AIReportData | null>(null);
     const fileInputRef   = useRef<HTMLInputElement>(null);
     const twTimerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -238,12 +240,11 @@ export function AnalyzeView() {
         await runFetch(file);
     };
 
-    // ── AI-Augmented Report — sends in-memory rows as JSON (no file picker!) ──
+    // ── AI-Augmented Report — send rows as JSON, show briefing panel ──────────
     const handleAIReport = async () => {
         if (rows.length === 0) return;
         setIsAIRunning(true); setAiSuccess(false); setAnalysisError(null);
 
-        // Start typewriter reasoning stream
         const thinkingLines = [
             '▶ Initialising Mistral-7B-Instruct…',
             '▶ Building structured threat prompt…',
@@ -270,19 +271,12 @@ export function AnalyzeView() {
                 throw new Error(err.error ?? `HTTP ${res.status}`);
             }
 
-            // Grab AI report ID so Manager can find it
-            const reportId = res.headers.get('X-AI-Report-Id');
-            if (reportId && setAiReportId) setAiReportId(reportId);
+            const data: AIReportData = await res.json();
 
-            // Auto-download the Expert CSV
-            const blob = await res.blob();
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'Expert_Security_Report.csv';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-
-            setAiText(prev => prev + '\n✅ Expert_Security_Report.csv downloaded successfully.');
+            if (data.reportId && setAiReportId) setAiReportId(data.reportId);
+            setAiText(prev => prev + '\n✅ Expert report ready.');
             setAiSuccess(true);
+            setAiReportData(data);  // opens the briefing panel
         } catch (err: any) {
             if (twTimerRef.current) clearInterval(twTimerRef.current);
             setAiText(prev => prev + `\n❌ Error: ${err.message}`);
@@ -292,6 +286,7 @@ export function AnalyzeView() {
         }
     };
 
+
     const pendingQueue  = pendingLogs.filter(l => l.status === 'pending');
     const radarData     = rows.length ? computeThreatData(rows) : undefined;
 
@@ -299,6 +294,7 @@ export function AnalyzeView() {
     return (
         <>
             <AnimatePresence>{isAIRunning && <LLMFullscreenOverlay />}</AnimatePresence>
+            <AIReportPanel data={aiReportData} onClose={() => setAiReportData(null)} />
 
             <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-4 p-5 overflow-hidden">
 
