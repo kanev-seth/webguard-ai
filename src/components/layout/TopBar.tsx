@@ -20,7 +20,7 @@ const ROLE_BADGE: Record<string, { label: string; color: string }> = {
 
 export function TopBar() {
     const { user, logout } = useAuth();
-    const { escalations }  = useSecurity();
+    const { escalations, analysisStats } = useSecurity();
     const { pathname }     = useLocation();
 
     if (!user) return null;
@@ -28,7 +28,14 @@ export function TopBar() {
     const pageLabel  = ROUTE_LABELS[pathname] ?? 'Console';
     const badge      = ROLE_BADGE[user.role];
     const pending    = escalations.filter((e) => e.status === 'pending').length;
-    const isThreat   = pending > 2;
+
+    // Live threat metrics — prefer current analysis stats, fall back to escalation count
+    const liveAnomalies    = analysisStats?.anomalyCount ?? pending;
+    const liveSecurePct    = analysisStats?.securePercent ?? (pending > 0 ? 97 : 100);
+    const isThreat         = liveAnomalies > 0 || pending > 2;
+    const threatSub        = analysisStats
+        ? `${liveAnomalies} in last scan`
+        : `${pending} pending review`;
 
     return (
         <motion.header
@@ -71,17 +78,17 @@ export function TopBar() {
                 <div className="flex items-center gap-2">
                     <MetricWidget
                         label="Secure Traffic"
-                        sub="Last 24 hours"
+                        sub={analysisStats ? `${analysisStats.totalLines.toLocaleString()} entries` : 'Last 24 hours'}
                         variant="emerald"
                         ring
-                        ringProgress={97}
-                        value="97"
+                        ringProgress={liveSecurePct}
+                        value={String(liveSecurePct) + '%'}
                     />
                     <MetricWidget
                         label="Active Threats"
-                        sub={`${pending} pending review`}
+                        sub={threatSub}
                         variant="crimson"
-                        value={pending}
+                        value={liveAnomalies}
                     />
 
                     {/* ── System Pulse Line (Live Health) ─────────────────── */}

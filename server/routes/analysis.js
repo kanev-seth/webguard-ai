@@ -124,20 +124,33 @@ async function processLogFile(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/analysis/process  (original — raw CSV, no AI)
+// POST /api/analysis/process  — returns JSON (avoids CSV comma-in-URL bugs)
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/process', upload.single('logfile'), async (req, res) => {
     const outcome = await processLogFile(req, res);
-    if (!outcome) return; // already responded with an error
+    if (!outcome) return;
 
     const { results, pyData } = outcome;
-    const csv = toCSV(results);
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="analysis_results.csv"');
-    res.setHeader('X-Total-Lines',    String(pyData.total   ?? results.length));
-    res.setHeader('X-Total-Anomalies', String(pyData.anomalies ?? 0));
-    res.send(csv);
+    // Normalise every row so the frontend always gets clean fields
+    const rows = results.map((r) => ({
+        ip:            r.ip            ?? '',
+        timestamp:     r.timestamp     ?? '',
+        method:        r.method        ?? '',
+        url:           r.url           ?? '',
+        status:        Number(r.status ?? 0),
+        bytes:         Number(r.bytes  ?? 0),
+        is_anomaly:    Boolean(r.is_anomaly),
+        anomaly_score: isFinite(r.anomaly_score) ? r.anomaly_score : 0,
+        reasons:       Array.isArray(r.reasons) ? r.reasons : [],
+        category:      r.category ?? (r.is_anomaly ? 'Anomaly' : 'Benign'),
+    }));
+
+    res.json({
+        total:     pyData.total     ?? rows.length,
+        anomalies: pyData.anomalies ?? rows.filter(r => r.is_anomaly).length,
+        results:   rows,
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -207,26 +220,19 @@ router.post('/generate-ai-report', async (req, res) => {
 
     const anomalyCount = results.filter((r) => r.is_anomaly).length;
 
-    // Only call LLM when there are actual anomalies to analyse
+    // generateAIReport now ALWAYS returns a result (HF or local engine)
     let aiReport = null;
-    if (anomalyCount > 0) {
-        try {
-            aiReport = await generateAIReport(results);
-        } catch (err) {
-            console.error('❌ AI report generation error:', err.message);
-        }
+    try {
+        aiReport = await generateAIReport(results);
+    } catch (err) {
+        console.error('AI report generation error:', err.message);
     }
 
-    // Graceful fallbacks
-    const summary = aiReport?.summary
-        ?? (anomalyCount === 0
-            ? 'Analysis complete. No anomalous traffic was detected in this log sample. All requests fall within normal operational parameters. Continue routine monitoring and schedule the next audit within 7 days.'
-            : 'AI analysis unavailable. Please set HUGGINGFACE_API_KEY in your .env file to enable LLM-powered expert commentary.');
-
-    const riskLevel    = aiReport?.riskLevel ?? (anomalyCount === 0 ? 'LOW' : 'MEDIUM');
-    const remediations = aiReport?.remediations ?? (anomalyCount === 0
-        ? ['Maintain current monitoring cadence.', 'Schedule next full log audit within 7 days.', 'Verify firewall rules are current and comprehensive.']
-        : ['Review flagged source IPs at the edge firewall.', 'Enable rate limiting on authentication endpoints.', 'Rotate API credentials on any affected services.']);
+    // Absolute last-resort fallback (should never hit)
+    const summary      = aiReport?.summary      ?? 'Analysis complete. Review the anomaly data below for details.';
+    const riskLevel    = aiReport?.riskLevel    ?? (anomalyCount === 0 ? 'LOW' : 'MEDIUM');
+    const remediations = aiReport?.remediations ?? ['Review flagged source IPs.', 'Enable rate limiting on auth endpoints.', 'Rotate any exposed credentials.'];
+    const aiEnabled    = aiReport?.aiEnabled    ?? false;
 
     // Build Expert CSV with UTF-8 BOM (fixes Excel encoding for special chars)
     const expertCsv = '\uFEFF' + toExpertCSV(results, { summary, riskLevel, remediations });
@@ -255,7 +261,7 @@ router.post('/generate-ai-report', async (req, res) => {
         remediations,
         anomalyCount,
         totalLines:  results.length,
-        aiEnabled:   !!aiReport,
+        aiEnabled:   aiEnabled,
         reportId:    savedReport?._id?.toString() ?? null,
         filename,
         generatedAt: new Date().toISOString(),

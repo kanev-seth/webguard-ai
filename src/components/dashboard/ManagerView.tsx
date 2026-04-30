@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Archive, ShieldCheck, Download, FileCheck, Zap, BrainCircuit, AlertTriangle, CheckCircle2, Clock, BarChart2 } from 'lucide-react';
+import { Archive, ShieldCheck, Download, FileCheck, Zap, BrainCircuit, AlertTriangle, CheckCircle2, Clock, BarChart2, RefreshCw, ChevronDown, FileText, FileJson, FileBadge, ShieldAlert, TrendingUp } from 'lucide-react';
 import { ThreatRadar } from '../ui/ThreatRadar';
 import { SkeletonCard } from '../ui/SkeletonLoader';
+import { useSecurity } from '../../context/SecurityContext';
 
 const RISK_CONFIG: Record<string, { color: string; dot: string; badge: string }> = {
     LOW:      { color: 'text-emerald',   dot: 'bg-emerald',   badge: 'bg-emerald/15 text-emerald' },
@@ -18,13 +19,29 @@ type FinalReport = { _id: string; final_decision: string; recommendation: string
 type AIReportEntry = { _id: string; filename: string; summary: string; riskLevel: string; remediations: string[]; rawAnomalyCount: number; totalLines: number; createdAt: string };
 
 export function ManagerView() {
-    const [reports, setReports]           = useState<FinalReport[]>([]);
-    const [aiReports, setAIReports]       = useState<AIReportEntry[]>([]);
-    const [selectedFinal, setSelectedFinal] = useState<FinalReport | null>(null);
-    const [selectedAI, setSelectedAI]     = useState<AIReportEntry | null>(null);
-    const [tab, setTab]                   = useState<'ai' | 'final'>('ai');
-    const [isLoadingAI, setIsLoadingAI]   = useState(true);
-    const [downloading, setDownloading]   = useState(false);
+    const { escalations, analysisStats } = useSecurity();
+    const [reports, setReports]               = useState<FinalReport[]>([]);
+    const [aiReports, setAIReports]           = useState<AIReportEntry[]>([]);
+    const [selectedFinal, setSelectedFinal]   = useState<FinalReport | null>(null);
+    const [selectedAI, setSelectedAI]         = useState<AIReportEntry | null>(null);
+    const [tab, setTab]                       = useState<'ai' | 'final'>('ai');
+    const [isLoadingAI, setIsLoadingAI]       = useState(true);
+    const [downloading, setDownloading]       = useState(false);
+    const [dlMenuOpen, setDlMenuOpen]         = useState(false);
+    const dlMenuRef                           = useRef<HTMLDivElement>(null);
+
+    const pendingEscalations = escalations.filter((e) => e.status === 'pending').length;
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (dlMenuRef.current && !dlMenuRef.current.contains(e.target as Node)) {
+                setDlMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     useEffect(() => { fetchReports(); fetchAIReports(); }, []);
 
@@ -40,17 +57,96 @@ export function ManagerView() {
         finally { setIsLoadingAI(false); }
     };
 
-    const downloadExpert = async (id: string, filename: string) => {
-        setDownloading(true);
+    // ── Download helpers ──────────────────────────────────────────────────────
+    const downloadExpertCsv = async (id: string, filename: string) => {
+        setDownloading(true); setDlMenuOpen(false);
         try {
             const r = await fetch(`http://localhost:5000/api/analysis/ai-reports/${id}/download`);
             if (!r.ok) throw new Error('Download failed');
             const blob = await r.blob();
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = `Expert_Security_Report_${filename}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        } catch { alert('Could not download report.'); }
+        } catch { alert('Could not download CSV report.'); }
         finally { setDownloading(false); }
     };
+
+    const downloadExecutiveBriefing = (report: AIReportEntry) => {
+        setDlMenuOpen(false);
+        const divider = '═'.repeat(72);
+        const thin    = '─'.repeat(72);
+        const date    = new Date(report.createdAt).toLocaleString();
+        const anomalyRate = report.totalLines
+            ? ((report.rawAnomalyCount / report.totalLines) * 100).toFixed(1)
+            : '0.0';
+
+        const remediationBlock = report.remediations.length
+            ? report.remediations.map((s, i) => `  ${i + 1}. ${s}`).join('\n')
+            : '  No remediation steps recorded.';
+
+        const content = [
+            divider,
+            '  WEBGUARD AI — EXECUTIVE SECURITY BRIEFING',
+            '  CONFIDENTIAL — MANAGER ACCESS ONLY',
+            divider,
+            '',
+            `  Report File   : ${report.filename}`,
+            `  Generated At  : ${date}`,
+            `  Report ID     : ${report._id}`,
+            `  Risk Level    : ${report.riskLevel}`,
+            '',
+            thin,
+            '  THREAT STATISTICS',
+            thin,
+            `  Total Log Lines Processed : ${report.totalLines}`,
+            `  Anomalies Detected        : ${report.rawAnomalyCount}`,
+            `  Benign Requests           : ${report.totalLines - report.rawAnomalyCount}`,
+            `  Anomaly Rate              : ${anomalyRate}%`,
+            '',
+            thin,
+            '  EXECUTIVE SUMMARY',
+            thin,
+            '',
+            ...report.summary.match(/.{1,68}/g)?.map(l => `  ${l}`) ?? [`  ${report.summary}`],
+            '',
+            thin,
+            '  REMEDIATION ACTION PLAN',
+            thin,
+            '',
+            remediationBlock,
+            '',
+            divider,
+            '  Generated by WebGuard AI Intelligence Platform',
+            '  Powered by Isolation Forest + Mistral-7B-Instruct SOC Layer',
+            divider,
+        ].join('\n');
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Executive_Briefing_${report.filename.replace(/[^a-z0-9]/gi, '_')}.txt`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+
+    const downloadJsonDump = (report: AIReportEntry) => {
+        setDlMenuOpen(false);
+        const payload = {
+            reportId:       report._id,
+            filename:       report.filename,
+            generatedAt:    report.createdAt,
+            riskLevel:      report.riskLevel,
+            anomalyCount:   report.rawAnomalyCount,
+            totalLines:     report.totalLines,
+            anomalyRate:    report.totalLines ? +((report.rawAnomalyCount / report.totalLines) * 100).toFixed(2) : 0,
+            summary:        report.summary,
+            remediations:   report.remediations,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `WebGuard_Report_${report._id}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    };
+    // ─────────────────────────────────────────────────────────────────────────
 
     const riskCfg = (level: string) => RISK_CONFIG[level] ?? RISK_CONFIG.UNKNOWN;
 
@@ -65,20 +161,61 @@ export function ManagerView() {
     ] : undefined;
 
     return (
-        <div className="h-[calc(100vh-3.5rem)] grid grid-cols-12 gap-4 p-5">
+        <div className="h-[calc(100vh-3.5rem)] flex flex-col gap-0 p-5 pb-0">
+
+            {/* ── Live Threat Intelligence Banner ────────────────────────── */}
+            <AnimatePresence>
+                {analysisStats && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                        className={`mb-3 flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs font-semibold shrink-0 ${
+                            analysisStats.anomalyCount > 0
+                                ? 'bg-crimson/8 border-crimson/25 text-crimson'
+                                : 'bg-emerald/8 border-emerald/20 text-emerald'
+                        }`}
+                    >
+                        {analysisStats.anomalyCount > 0
+                            ? <ShieldAlert className="w-4 h-4 shrink-0 animate-pulse" />
+                            : <ShieldCheck  className="w-4 h-4 shrink-0" />
+                        }
+                        <span className="font-bold">
+                            {analysisStats.anomalyCount > 0
+                                ? `ACTIVE THREAT REPORT — ${analysisStats.anomalyCount} anomalie${analysisStats.anomalyCount > 1 ? 's' : ''} detected`
+                                : 'LAST SCAN CLEAR — No anomalies detected'
+                            }
+                        </span>
+                        <span className="text-slate-500 font-normal">
+                            in {analysisStats.totalLines.toLocaleString()} log entries &nbsp;·&nbsp;
+                            {(100 - analysisStats.securePercent).toFixed(1)}% threat rate &nbsp;·&nbsp;
+                            {analysisStats.securePercent}% secure
+                        </span>
+                        {pendingEscalations > 0 && (
+                            <span className="ml-auto flex items-center gap-1 text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                <TrendingUp className="w-3 h-3" />{pendingEscalations} escalation{pendingEscalations > 1 ? 's' : ''} pending
+                            </span>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
 
             {/* ── LEFT: Archive / AI Briefings ── */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                 className="col-span-3 glass-panel rounded-2xl flex flex-col overflow-hidden">
 
                 {/* Tab switcher */}
-                <div className="flex border-b border-white/8 shrink-0">
+                <div className="flex border-b border-white/8 shrink-0 items-center">
                     {([['ai', 'AI Briefings', BrainCircuit], ['final', 'Archive', Archive]] as const).map(([key, label, Icon]) => (
                         <button key={key} onClick={() => setTab(key)}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-bold transition-all ${tab === key ? 'text-lavender border-b-2 border-lavender' : 'text-slate-500 hover:text-slate-300'}`}>
                             <Icon className="w-3.5 h-3.5" />{label}
                         </button>
                     ))}
+                    <button onClick={() => fetchAIReports()}
+                        className="px-2.5 py-3 text-slate-600 hover:text-slate-400 transition-colors" title="Refresh">
+                        <RefreshCw className="w-3 h-3" />
+                    </button>
                 </div>
 
                 <div className="flex-1 overflow-auto p-2 space-y-1.5 scrollbar-thin">
@@ -86,9 +223,14 @@ export function ManagerView() {
                         isLoadingAI ? (
                             <div className="space-y-2 p-1"><SkeletonCard lines={2} /><SkeletonCard lines={2} /></div>
                         ) : aiReports.length === 0 ? (
-                            <div className="text-slate-600 p-4 text-xs text-center mt-4">
-                                <BrainCircuit className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                No AI reports yet.<br />Run "Generate AI-Augmented Report" in Threat Analysis.
+                            <div className="text-slate-600 p-4 text-xs text-center mt-6 space-y-3">
+                                <BrainCircuit className="w-10 h-10 mx-auto opacity-15" />
+                                <p className="text-slate-500 text-xs font-semibold">No reports yet</p>
+                                <p className="text-slate-700 text-[10px] leading-relaxed">
+                                    Go to <span className="text-lavender font-bold">Threat Analysis</span>, upload a log file, run ML Analysis, then click
+                                    <span className="text-lavender font-bold"> Generate AI-Augmented Report</span>.
+                                </p>
+                                <p className="text-slate-700 text-[10px]">Reports will appear here for download.</p>
                             </div>
                         ) : aiReports.map((r) => {
                             const cfg = riskCfg(r.riskLevel);
@@ -171,14 +313,73 @@ export function ManagerView() {
                                 <p className="text-sm text-slate-300 leading-relaxed">{selectedAI.summary}</p>
                             </div>
 
-                            {/* Download button */}
-                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                onClick={() => downloadExpert(selectedAI._id, selectedAI.filename)}
-                                disabled={downloading}
-                                className="w-full py-3 rounded-xl bg-gradient-to-r from-lavender to-purple-500 text-slate-900 font-bold flex items-center justify-center gap-2 text-sm hover:shadow-lg hover:shadow-lavender/25 transition-all btn-glow-lavender shrink-0 disabled:opacity-60">
-                                <Download className="w-4 h-4" />
-                                {downloading ? 'Downloading…' : 'Download Expert_Security_Report.csv'}
-                            </motion.button>
+                            {/* Download dropdown */}
+                            <div ref={dlMenuRef} className="relative shrink-0">
+                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                    onClick={() => setDlMenuOpen(o => !o)}
+                                    disabled={downloading}
+                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-lavender to-purple-500 text-slate-900 font-bold flex items-center justify-center gap-2 text-sm hover:shadow-lg hover:shadow-lavender/25 transition-all btn-glow-lavender disabled:opacity-60">
+                                    <Download className="w-4 h-4" />
+                                    {downloading ? 'Downloading…' : 'Download Report'}
+                                    <ChevronDown className={`w-3.5 h-3.5 ml-1 transition-transform ${dlMenuOpen ? 'rotate-180' : ''}`} />
+                                </motion.button>
+
+                                <AnimatePresence>
+                                    {dlMenuOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute bottom-full mb-2 left-0 right-0 glass-panel rounded-xl overflow-hidden border border-white/12 z-50 shadow-2xl shadow-black/60"
+                                        >
+                                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest px-3 pt-2.5 pb-1">Export Format</p>
+
+                                            {/* Expert CSV */}
+                                            <button
+                                                onClick={() => downloadExpertCsv(selectedAI._id, selectedAI.filename)}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-lavender/8 transition-colors text-left group"
+                                            >
+                                                <div className="w-7 h-7 rounded-lg bg-emerald/10 flex items-center justify-center shrink-0 group-hover:bg-emerald/20 transition-colors">
+                                                    <FileBadge className="w-3.5 h-3.5 text-emerald" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-white">Expert CSV</p>
+                                                    <p className="text-[10px] text-slate-500">Annotated data for SIEM ingestion</p>
+                                                </div>
+                                            </button>
+
+                                            {/* Executive Briefing TXT */}
+                                            <button
+                                                onClick={() => downloadExecutiveBriefing(selectedAI)}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-lavender/8 transition-colors text-left group"
+                                            >
+                                                <div className="w-7 h-7 rounded-lg bg-lavender/10 flex items-center justify-center shrink-0 group-hover:bg-lavender/20 transition-colors">
+                                                    <FileText className="w-3.5 h-3.5 text-lavender" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-white">Executive Briefing</p>
+                                                    <p className="text-[10px] text-slate-500">Formatted .txt for leadership review</p>
+                                                </div>
+                                            </button>
+
+                                            {/* JSON Dump */}
+                                            <button
+                                                onClick={() => downloadJsonDump(selectedAI)}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 pb-3 hover:bg-lavender/8 transition-colors text-left group"
+                                            >
+                                                <div className="w-7 h-7 rounded-lg bg-terracotta/10 flex items-center justify-center shrink-0 group-hover:bg-terracotta/20 transition-colors">
+                                                    <FileJson className="w-3.5 h-3.5 text-terracotta" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-white">Raw JSON</p>
+                                                    <p className="text-[10px] text-slate-500">Structured data for API integration</p>
+                                                </div>
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </motion.div>
                     ) : tab === 'final' && selectedFinal ? (
                         <motion.div key={selectedFinal._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full p-6">
@@ -277,6 +478,7 @@ export function ManagerView() {
                     </motion.div>
                 )}
             </motion.div>
+            </div>{/* end inner grid */}
         </div>
     );
 }

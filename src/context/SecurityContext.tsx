@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export interface AnalystRow {
@@ -42,6 +42,14 @@ export interface AuditEntry {
     resolvedBy: string;
 }
 
+// Live stats from the most recent analysis run
+export interface AnalysisStats {
+    anomalyCount:    number;
+    totalLines:      number;
+    securePercent:   number;  // 0-100
+    analyzedAt:      string;  // ISO timestamp
+}
+
 interface SecurityContextType {
     // Contributor → Analyst queue
     pendingLogs: PendingLog[];
@@ -58,6 +66,10 @@ interface SecurityContextType {
     // AI Report persistence (latest report ID from LLM run)
     aiReportId: string | null;
     setAiReportId: (id: string | null) => void;
+
+    // Live analysis stats (populated after each ML analysis run)
+    analysisStats: AnalysisStats | null;
+    setAnalysisStats: (stats: AnalysisStats) => void;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -134,10 +146,15 @@ const SEED_AUDIT: AuditEntry[] = [
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 export function SecurityProvider({ children }: { children: ReactNode }) {
-    const [pendingLogs,   setPendingLogs]   = useState<PendingLog[]>(SEED_PENDING);
-    const [escalations,   setEscalations]   = useState<Escalation[]>(SEED_ESCALATIONS);
-    const [auditTrail,    setAuditTrail]    = useState<AuditEntry[]>(SEED_AUDIT);
-    const [aiReportId,    setAiReportId]    = useState<string | null>(null);
+    const [pendingLogs,    setPendingLogs]   = useState<PendingLog[]>(SEED_PENDING);
+    const [escalations,    setEscalations]   = useState<Escalation[]>(SEED_ESCALATIONS);
+    const [auditTrail,     setAuditTrail]    = useState<AuditEntry[]>(SEED_AUDIT);
+    const [aiReportId,     setAiReportId]    = useState<string | null>(null);
+    const [analysisStats,  setAnalysisStatsState] = useState<AnalysisStats | null>(null);
+
+    const setAnalysisStats = useCallback((stats: AnalysisStats) => {
+        setAnalysisStatsState(stats);
+    }, []);
 
     // ── Pending log helpers ──────────────────────────────────────────────────
     const addPendingLog = (log: PendingLog) =>
@@ -187,6 +204,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
             pendingLogs, addPendingLog, setPendingLogStatus, removePendingLog,
             escalations, auditTrail, addEscalation, resolveEscalation,
             aiReportId, setAiReportId,
+            analysisStats, setAnalysisStats,
         }}>
             {children}
         </SecurityContext.Provider>

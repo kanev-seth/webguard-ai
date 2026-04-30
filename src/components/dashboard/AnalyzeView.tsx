@@ -168,7 +168,7 @@ function typewriterEffect(
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function AnalyzeView() {
-    const { pendingLogs, setPendingLogStatus, removePendingLog, setAiReportId } = useSecurity();
+    const { pendingLogs, setPendingLogStatus, removePendingLog, setAiReportId, setAnalysisStats } = useSecurity();
     const [rows, setRows]               = useState<AnalystRow[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isAIRunning, setIsAIRunning] = useState(false);
@@ -205,21 +205,38 @@ export function AnalyzeView() {
         try {
             const form = new FormData(); form.append('logfile', file);
             const res = await fetch(`http://localhost:5000${endpoint}`, { method: 'POST', body: form });
-            if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Unknown error' })); throw new Error(e.error ?? `HTTP ${res.status}`); }
+            if (!res.ok) {
+                const e = await res.json().catch(() => ({ error: 'Unknown error' }));
+                throw new Error(e.error ?? `HTTP ${res.status}`);
+            }
 
-            // Grab AI report ID if present
+            // Grab AI report ID if present (still in header for process-ai)
             const reportId = res.headers.get('X-AI-Report-Id');
             if (reportId && setAiReportId) setAiReportId(reportId);
 
-            const csvText = await res.text();
-            const lines   = csvText.split(/\r?\n/).filter(Boolean);
-            const headers = lines[0].split(',');
-            const parsed: AnalystRow[] = lines.slice(1).map((line) => {
-                const cols = line.match(/(\"(?:[^\"]|\"\")*\"|[^,]*)/g)?.map(c => c.startsWith('"') ? c.slice(1, -1).replace(/""/g, '"') : c) ?? [];
-                const get = (h: string) => cols[headers.indexOf(h)] ?? '';
-                return { ip: get('IP'), timestamp: get('Timestamp'), method: get('Method'), url: get('URL'), status: Number(get('Status')), bytes: Number(get('Bytes')), is_anomaly: get('Is_Anomaly') === 'true', anomaly_score: parseFloat(get('Anomaly_Score')), reasons: get('Reasons').split(' | ').filter(Boolean) };
-            });
+            const data = await res.json();
+            const rawResults: any[] = data.results ?? [];
+
+            const parsed: AnalystRow[] = rawResults.map((r: any) => ({
+                ip:            String(r.ip            ?? ''),
+                timestamp:     String(r.timestamp     ?? ''),
+                method:        String(r.method        ?? ''),
+                url:           String(r.url           ?? ''),
+                status:        Number(r.status        ?? 0),
+                bytes:         Number(r.bytes         ?? 0),
+                is_anomaly:    Boolean(r.is_anomaly),
+                anomaly_score: isFinite(Number(r.anomaly_score)) ? Number(r.anomaly_score) : 0,
+                reasons:       Array.isArray(r.reasons) ? r.reasons.map(String) : [],
+            }));
+
             setRows(parsed);
+
+            // Push live stats to global context (TopBar + Manager reads from here)
+            const anomalyCount  = parsed.filter((r) => r.is_anomaly).length;
+            const totalLines    = parsed.length;
+            const securePercent = totalLines > 0 ? Math.round(((totalLines - anomalyCount) / totalLines) * 100) : 100;
+            setAnalysisStats({ anomalyCount, totalLines, securePercent, analyzedAt: new Date().toISOString() });
+
         } catch (err: any) { setAnalysisError(err.message ?? 'Analysis failed'); }
         finally { setIsAnalyzing(false); setIsAIRunning(false); }
     }, [setAiReportId]);
