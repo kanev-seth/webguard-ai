@@ -44,7 +44,7 @@ function toExpertCSV(results, aiReport) {
             : s;
     };
 
-    const riskLevel      = aiReport?.riskLevel    ?? 'UNKNOWN';
+    const riskLevel = aiReport?.riskLevel ?? 'UNKNOWN';
     const remediationStr = aiReport?.remediations?.join(' | ') ?? '';
 
     const rows = results.map((r) => {
@@ -91,9 +91,9 @@ async function processLogFile(req, res) {
     let pyResponse;
     try {
         pyResponse = await fetch('http://localhost:5001/analyze', {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    payload,
+            body: payload,
         });
     } catch (networkErr) {
         console.error('❌ Could not reach Python microservice:', networkErr.message);
@@ -110,7 +110,7 @@ async function processLogFile(req, res) {
         return null;
     }
 
-    const pyData  = await pyResponse.json();
+    const pyData = await pyResponse.json();
     const results = pyData.results ?? [];
 
     if (results.length === 0) {
@@ -134,22 +134,22 @@ router.post('/process', upload.single('logfile'), async (req, res) => {
 
     // Normalise every row so the frontend always gets clean fields
     const rows = results.map((r) => ({
-        ip:            r.ip            ?? '',
-        timestamp:     r.timestamp     ?? '',
-        method:        r.method        ?? '',
-        url:           r.url           ?? '',
-        status:        Number(r.status ?? 0),
-        bytes:         Number(r.bytes  ?? 0),
-        is_anomaly:    Boolean(r.is_anomaly),
+        ip: r.ip ?? '',
+        timestamp: r.timestamp ?? '',
+        method: r.method ?? '',
+        url: r.url ?? '',
+        status: Number(r.status ?? 0),
+        bytes: Number(r.bytes ?? 0),
+        is_anomaly: Boolean(r.is_anomaly),
         anomaly_score: isFinite(r.anomaly_score) ? r.anomaly_score : 0,
-        reasons:       Array.isArray(r.reasons) ? r.reasons : [],
-        category:      r.category ?? (r.is_anomaly ? 'Anomaly' : 'Benign'),
+        reasons: Array.isArray(r.reasons) ? r.reasons : [],
+        category: r.category ?? (r.is_anomaly ? 'Anomaly' : 'Benign'),
     }));
 
     res.json({
-        total:     pyData.total     ?? rows.length,
+        total: pyData.total ?? rows.length,
         anomalies: pyData.anomalies ?? rows.filter(r => r.is_anomaly).length,
-        results:   rows,
+        results: rows,
     });
 });
 
@@ -180,11 +180,11 @@ router.post('/process-ai', upload.single('logfile'), async (req, res) => {
         const anomalyCount = results.filter((r) => r.is_anomaly).length;
         savedReport = await AIReport.create({
             filename,
-            summary:         aiReport?.summary      ?? 'AI analysis unavailable — set HUGGINGFACE_API_KEY.',
-            riskLevel:       aiReport?.riskLevel     ?? 'MEDIUM',
-            remediations:    aiReport?.remediations  ?? [],
+            summary: aiReport?.summary ?? 'AI analysis unavailable — set HUGGINGFACE_API_KEY.',
+            riskLevel: aiReport?.riskLevel ?? 'MEDIUM',
+            remediations: aiReport?.remediations ?? [],
             rawAnomalyCount: anomalyCount,
-            totalLines:      results.length,
+            totalLines: results.length,
             expertCsvBase64: Buffer.from(expertCsv).toString('base64'),
         });
         console.log('✅ AIReport saved to MongoDB:', savedReport._id);
@@ -195,9 +195,9 @@ router.post('/process-ai', upload.single('logfile'), async (req, res) => {
     // ── Send Enhanced CSV ──────────────────────────────────────────────────────
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="Expert_Security_Report.csv"');
-    res.setHeader('X-Total-Lines',     String(pyData.total    ?? results.length));
+    res.setHeader('X-Total-Lines', String(pyData.total ?? results.length));
     res.setHeader('X-Total-Anomalies', String(pyData.anomalies ?? 0));
-    res.setHeader('X-AI-Enabled',      aiReport ? 'true' : 'false');
+    res.setHeader('X-AI-Enabled', aiReport ? 'true' : 'false');
     if (savedReport) {
         res.setHeader('X-AI-Report-Id', String(savedReport._id));
     }
@@ -229,10 +229,10 @@ router.post('/generate-ai-report', async (req, res) => {
     }
 
     // Absolute last-resort fallback (should never hit)
-    const summary      = aiReport?.summary      ?? 'Analysis complete. Review the anomaly data below for details.';
-    const riskLevel    = aiReport?.riskLevel    ?? (anomalyCount === 0 ? 'LOW' : 'MEDIUM');
+    const summary = aiReport?.summary ?? 'Analysis complete. Review the anomaly data below for details.';
+    const riskLevel = aiReport?.riskLevel ?? (anomalyCount === 0 ? 'LOW' : 'MEDIUM');
     const remediations = aiReport?.remediations ?? ['Review flagged source IPs.', 'Enable rate limiting on auth endpoints.', 'Rotate any exposed credentials.'];
-    const aiEnabled    = aiReport?.aiEnabled    ?? false;
+    const aiEnabled = aiReport?.aiEnabled ?? false;
 
     // Build Expert CSV with UTF-8 BOM (fixes Excel encoding for special chars)
     const expertCsv = '\uFEFF' + toExpertCSV(results, { summary, riskLevel, remediations });
@@ -246,7 +246,7 @@ router.post('/generate-ai-report', async (req, res) => {
             riskLevel,
             remediations,
             rawAnomalyCount: anomalyCount,
-            totalLines:      results.length,
+            totalLines: results.length,
             expertCsvBase64: Buffer.from(expertCsv).toString('base64'),
         });
         console.log('✅ AIReport saved to MongoDB:', savedReport._id);
@@ -260,9 +260,9 @@ router.post('/generate-ai-report', async (req, res) => {
         riskLevel,
         remediations,
         anomalyCount,
-        totalLines:  results.length,
-        aiEnabled:   aiEnabled,
-        reportId:    savedReport?._id?.toString() ?? null,
+        totalLines: results.length,
+        aiEnabled: aiEnabled,
+        reportId: savedReport?._id?.toString() ?? null,
         filename,
         generatedAt: new Date().toISOString(),
     });
