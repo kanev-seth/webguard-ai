@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,18 +6,26 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --primary: 247 100% 84%;    /* Lavender #BDB2FF */
-    --secondary: 13 72% 62%;    /* Terracotta #E2725B */
-    --emerald: 160 84% 39%;     /* #10B981 */
-    --crimson: 0 72% 51%;       /* #DC2626 */
-    --muted: 217.2 32.6% 17.5%;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+    
+    /* Clean, elegant brand colors */
+    --primary: 249 100% 85%;     /* Original Lavender */
+    --primary-glow: 249 100% 85%;
+    --secondary: 215 25% 27%;
+    
+    /* Status Colors */
+    --emerald: 150 84% 45%;     /* Clean green */
+    --crimson: 348 83% 47%;     /* Refined red */
+    --amber: 38 92% 50%;        /* Warning yellow */
+    
+    --muted: 223 47% 11%;
     --muted-foreground: 215 20.2% 65.1%;
-    --border: 217.2 32.6% 17.5%;
-    --ring: 247 100% 84%;
-    --radius: 0.75rem;
-    /* Threat-reactive gradient control (0=safe, 1=threat) */
+    
+    --border: 216 34% 17%;
+    --ring: 217 91% 60%;
+    
+    --radius: 1rem;
     --threat-intensity: 0;
   }
 }
@@ -25,111 +33,113 @@
 @layer base {
   * { @apply border-border; }
   body {
-    @apply bg-obsidian text-foreground font-sans min-h-screen selection:bg-lavender/30 selection:text-white;
-    overflow: hidden;
+    @apply bg-background text-foreground min-h-screen selection:bg-primary/30 selection:text-white;
+    font-family: 'Inter', sans-serif;
+    background-color: hsl(var(--background));
+    overflow-x: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
   }
 }
 
 @layer utilities {
-  /* ── Glass panels — multi-layered deep glassmorphism ─────────────────────── */
+  /* ── Premium Glassmorphism ──────────────────────────────────────────────── */
   .glass-panel {
-    background:
-      linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.05) inset,
-      0 24px 48px rgba(0,0,0,0.4),
-      0 0 0 1px rgba(0,0,0,0.3);
-  }
-  .glass-panel-deep {
-    background:
-      linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(2,6,23,0.6) 100%);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border: 1px solid rgba(255,255,255,0.06);
-    box-shadow:
-      0 1px 0 rgba(255,255,255,0.04) inset,
-      0 32px 64px rgba(0,0,0,0.5);
-  }
-  .glass-card {
-    @apply bg-black/40 border border-white/10 shadow-lg shadow-black/20;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glass-panel-deep {
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.6) 0%, rgba(2, 6, 23, 0.8) 100%);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  }
+  
+  .glass-card {
+    @apply bg-slate-900/40 border border-slate-700/50 shadow-xl;
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+  }
+  
+  .glass-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(15, 23, 42, 0.5);
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
   }
 
-  /* ── Neon borders ─────────────────────────────────────────────────────────── */
+  /* ── Refined Subtle Glowing Borders ───────────────────────────────────────── */
   .neon-border-primary {
-    border: 1px solid rgba(189,178,255,0.3);
-    box-shadow: 0 0 20px rgba(189,178,255,0.12), 0 0 40px rgba(189,178,255,0.05) inset;
+    border: 1px solid hsla(var(--primary), 0.5);
+    box-shadow: 0 0 15px hsla(var(--primary), 0.2), inset 0 0 10px hsla(var(--primary), 0.1);
   }
   .neon-border-emerald {
-    border: 1px solid rgba(16,185,129,0.3);
-    box-shadow: 0 0 20px rgba(16,185,129,0.12), 0 0 40px rgba(16,185,129,0.05) inset;
+    border: 1px solid hsla(var(--emerald), 0.4);
+    box-shadow: 0 0 15px hsla(var(--emerald), 0.15), inset 0 0 10px hsla(var(--emerald), 0.05);
   }
   .neon-border-crimson {
-    border: 1px solid rgba(220,38,38,0.3);
-    box-shadow: 0 0 20px rgba(220,38,38,0.15), 0 0 40px rgba(220,38,38,0.06) inset;
+    border: 1px solid hsla(var(--crimson), 0.5);
+    box-shadow: 0 0 15px hsla(var(--crimson), 0.2), inset 0 0 10px hsla(var(--crimson), 0.1);
   }
 
-  /* ── Text glow ────────────────────────────────────────────────────────────── */
-  .text-glow-primary  { text-shadow: 0 0 12px rgba(189,178,255,0.5); }
-  .text-glow-emerald  { text-shadow: 0 0 12px rgba(16,185,129,0.5);  }
-  .text-glow-crimson  { text-shadow: 0 0 12px rgba(220,38,38,0.5);   }
+  /* ── Elegant Text Glows ─────────────────────────────────────────────────── */
+  .text-glow-primary  { text-shadow: 0 0 16px hsla(var(--primary), 0.4); }
+  .text-glow-emerald  { text-shadow: 0 0 16px hsla(var(--emerald), 0.4); }
+  .text-glow-crimson  { text-shadow: 0 0 16px hsla(var(--crimson), 0.4); }
 
-  /* ── Scrollbars ───────────────────────────────────────────────────────────── */
+  /* ── Clean Scrollbars ───────────────────────────────────────────────────── */
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.1) transparent;
+    scrollbar-color: rgba(255,255,255,0.05) transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar       { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { 
+    background: rgba(255,255,255,0.1); 
+    border-radius: 10px; 
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
+  }
 
-  /* ── Ambient mesh gradient — base (safe / lavender) ─────────────────────── */
+  /* ── Ambient Background Mesh (Elegant Dark) ──────────────────────────────── */
   .mesh-bg {
-    background:
-      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(189,178,255,0.07) 0%, transparent 60%),
-      radial-gradient(ellipse 70% 50% at 80% 70%, rgba(16,185,129,0.05) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 80% at 60% 10%, rgba(220,38,38,0.04) 0%, transparent 50%),
-      #020617;
-    animation: mesh-drift 18s ease-in-out infinite alternate;
+    background-color: #050b14;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(217, 91%, 60%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(150, 84%, 45%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(348, 83%, 47%, 0.05) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(217, 91%, 60%, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
   }
 
-  /* ── Threat-reactive mesh — shifts ambient to crimson ────────────────────── */
   .mesh-bg-threat {
-    background:
-      radial-gradient(ellipse 90% 70% at 25% 35%, rgba(220,38,38,0.14) 0%, transparent 60%),
-      radial-gradient(ellipse 70% 50% at 75% 65%, rgba(220,38,38,0.08) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 80% at 55% 10%, rgba(189,178,255,0.03) 0%, transparent 50%),
-      #020617;
-    animation: mesh-threat-drift 12s ease-in-out infinite alternate;
+    background-color: #0f0505;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(348, 83%, 47%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(348, 83%, 47%, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+    transition: background-color 2s ease;
   }
 
-  @keyframes mesh-drift {
-    0%   { background-position: 0% 0%, 100% 100%, 50% 0%; }
-    50%  { background-position: 10% 20%, 80%  70%, 60% 30%; }
-    100% { background-position: 5% 10%, 90%  80%, 40% 20%; }
-  }
-
-  @keyframes mesh-threat-drift {
-    0%   { background-position: 0% 0%, 100% 100%, 50% 0%; }
-    50%  { background-position: 15% 25%, 70%  60%, 55% 35%; }
-    100% { background-position: 8% 15%, 85%  75%, 35% 15%; }
-  }
-
-  /* ── Skeleton shimmer (Schematic Scanner) ────────────────────────────────── */
+  /* ── Data Table Shimmer ─────────────────────────────────────────────────── */
   .skeleton-line {
     background: linear-gradient(
       90deg,
-      rgba(255,255,255,0.04) 25%,
-      rgba(255,255,255,0.12) 50%,
-      rgba(255,255,255,0.04) 75%
+      rgba(255,255,255,0.02) 25%,
+      rgba(255,255,255,0.06) 50%,
+      rgba(255,255,255,0.02) 75%
     );
     background-size: 200% 100%;
-    animation: schematic-shimmer 1.8s linear infinite;
+    animation: schematic-shimmer 2s ease-in-out infinite;
   }
 
   @keyframes schematic-shimmer {
@@ -137,87 +147,59 @@
     100% { background-position: -200% 0; }
   }
 
-  /* ── Scan line overlay for skeleton tables ───────────────────────────────── */
-  .scan-overlay {
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0px,
-      transparent 3px,
-      rgba(189,178,255,0.015) 3px,
-      rgba(189,178,255,0.015) 4px
-    );
-    animation: scan-sweep 3s linear infinite;
-  }
-
-  @keyframes scan-sweep {
-    0%   { opacity: 0.3; transform: translateY(-4px); }
-    50%  { opacity: 0.6; }
-    100% { opacity: 0.3; transform: translateY(4px); }
-  }
-
-  /* ── AI full-screen overlay particles ───────────────────────────────────── */
-  @keyframes orbit {
-    0%   { transform: rotate(0deg) translateX(60px) rotate(0deg); }
-    100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
-  }
-  .orbit-particle {
-    animation: orbit 3s linear infinite;
-  }
-  .orbit-particle-2 {
-    animation: orbit 4.5s linear infinite reverse;
-  }
-  .orbit-particle-3 {
-    animation: orbit 2s linear infinite;
-    animation-delay: -1s;
-  }
-
-  /* ── Misc animations ──────────────────────────────────────────────────────── */
-  .animate-slow-spin { animation: spin 20s linear infinite; }
+  /* ── Floating Animations ────────────────────────────────────────────────── */
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite;
+  }
+  .animate-float-delayed {
+    animation: float 8s ease-in-out infinite;
+    animation-delay: 4s;
   }
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50%       { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0px); }
+    50%      { transform: translateY(-15px); }
   }
 
-  /* ── Gradient button glow ─────────────────────────────────────────────────── */
-  .btn-glow-lavender {
-    box-shadow: 0 0 24px rgba(189,178,255,0.25), 0 0 6px rgba(189,178,255,0.15);
+  /* ── Premium Buttons ────────────────────────────────────────────────────── */
+  .btn-premium {
+    @apply relative overflow-hidden font-medium rounded-xl transition-all duration-300 active:scale-95;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%), hsla(var(--primary), 1);
+    box-shadow: 0 4px 14px 0 hsla(var(--primary), 0.39);
+    border: 1px solid hsla(var(--primary), 0.8);
   }
-  .btn-glow-emerald {
-    box-shadow: 0 0 24px rgba(16,185,129,0.25), 0 0 6px rgba(16,185,129,0.15);
+  .btn-premium:hover {
+    box-shadow: 0 6px 20px 0 hsla(var(--primary), 0.5);
+    transform: translateY(-1px);
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%), hsla(var(--primary), 1);
   }
-  .btn-glow-crimson {
-    box-shadow: 0 0 24px rgba(220,38,38,0.3), 0 0 8px rgba(220,38,38,0.15);
+  
+  .btn-danger {
+    @apply relative overflow-hidden font-medium rounded-xl transition-all duration-300 active:scale-95;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%), hsla(var(--crimson), 1);
+    box-shadow: 0 4px 14px 0 hsla(var(--crimson), 0.39);
+    border: 1px solid hsla(var(--crimson), 0.8);
+  }
+  .btn-danger:hover {
+    box-shadow: 0 6px 20px 0 hsla(var(--crimson), 0.5);
+    transform: translateY(-1px);
   }
 
-  /* ── Magnetic button base ─────────────────────────────────────────────────── */
-  .btn-magnetic {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    will-change: transform;
+  .btn-outline-premium {
+    @apply relative overflow-hidden font-medium rounded-xl transition-all duration-300 active:scale-95 bg-transparent text-white;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-outline-premium:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.4);
   }
 
-  /* ── Bento grid card hover ────────────────────────────────────────────────── */
+  /* ── Bento Grid Hover Effects ───────────────────────────────────────────── */
   .bento-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
   }
   .bento-card:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow:
-      0 20px 40px rgba(0,0,0,0.4),
-      0 0 0 1px rgba(189,178,255,0.08);
-  }
-
-  /* ── Typewriter cursor ────────────────────────────────────────────────────── */
-  .typewriter-cursor::after {
-    content: '█';
-    animation: blink-cursor 0.8s step-end infinite;
-    color: #BDB2FF;
-    margin-left: 1px;
-  }
-  @keyframes blink-cursor {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0; }
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05);
   }
 }

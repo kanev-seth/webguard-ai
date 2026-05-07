@@ -336,9 +336,9 @@ export function AnalyzeView() {
                                     whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                                     onClick={handleAIReport}
                                     disabled={isAIRunning || isAnalyzing || rows.length === 0}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-lavender to-purple-500 text-slate-900 text-xs font-bold btn-glow-lavender hover:shadow-lg hover:shadow-lavender/30 transition-all disabled:opacity-50"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/20 border border-primary/50 text-white text-xs font-bold btn-glow-lavender hover:bg-primary/30 transition-all disabled:opacity-50"
                                 >
-                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <Sparkles className="w-3.5 h-3.5 text-primary" />
                                     Generate AI-Augmented Report
                                 </motion.button>
                             </>

@@ -7,24 +7,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        obsidian: "#020617", // Base canvas
-        lavender: "#BDB2FF", // Primary Accent (Safe/Action)
-        terracotta: "#E2725B", // Secondary Accent (Alert/Critical)
-        emerald: "#10B981",   // Secure / Benign state
+        obsidian: "#0f172a", // Dark slate background
+        lavender: "#BDB2FF", // Original lavender
+        terracotta: "#ef4444", // Red alerts
+        emerald: "#10b981", // Green success
 
         // Semantic overrides
-        background: "#020617",
-        foreground: "#f8fafc",
-        card: "rgba(2, 6, 23, 0.7)",
-        "card-foreground": "#f8fafc",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: "rgba(15, 23, 42, 0.7)",
+        "card-foreground": "hsl(var(--foreground))",
         primary: "#BDB2FF",
-        "primary-foreground": "#020617",
-        secondary: "#E2725B",
+        "primary-foreground": "#0f172a",
+        secondary: "#1e293b",
         "secondary-foreground": "#f8fafc",
         muted: "rgba(255, 255, 255, 0.05)",
         "muted-foreground": "#94a3b8",
         border: "rgba(255, 255, 255, 0.1)",
-        crimson: "#DC2626",
+        crimson: "#e11d48",
 
       },
       fontFamily: {
